@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<title>Easy MVT</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #00ff41;
+    font: 15px/1.7 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  body { display: grid; place-items: center; }
+  .box { max-width: 520px; padding: 24px; }
+  .cur { animation: b 1.1s steps(1) infinite; } @keyframes b { 50% { opacity: 0; } }
+  .muted { color: #8a8a8a; }
+  .dots::after { content: ""; animation: d 1.5s steps(4) infinite; }
+  @keyframes d { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+</style></head>
+<body><div class="box">
+  <div>easy-mvt<span class="cur">_</span></div>
+  <div>&gt; starting the scanner engine<span class="dots"></span></div>
+  <p class="muted">The very first start downloads a private copy of Python (about 25 MB),
+    which needs an internet connection and can take a minute. Later starts take a few seconds.</p>
+</div></body></html>

@@ -1,0 +1,89 @@
+{
+  "name": "easy-mvt",
+  "productName": "Easy MVT",
+  "version": "0.1.0",
+  "description": "Friendly desktop interface for Amnesty International's Mobile Verification Toolkit (unofficial)",
+  "license": "MIT",
+  "author": "SsybaSgyu (https://github.com/SsybaSgyu)",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "fetch-uv": "node scripts/fetch-uv.js",
+    "start": "node scripts/fetch-uv.js && electron .",
+    "dist": "node scripts/fetch-uv.js && electron-builder --publish never",
+    "dist:mac": "node scripts/fetch-uv.js darwin arm64 && node scripts/fetch-uv.js darwin x64 && electron-builder --mac --arm64 --x64 --publish never",
+    "dist:win": "node scripts/fetch-uv.js win32 x64 && electron-builder --win --x64 --publish never",
+    "dist:linux": "node scripts/fetch-uv.js linux x64 && electron-builder --linux --x64 --publish never"
+  },
+  "build": {
+    "appId": "io.github.ssybasgyu.easymvt",
+    "productName": "Easy MVT",
+    "artifactName": "Easy-MVT-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "app.py",
+        "to": "backend/app.py"
+      },
+      {
+        "from": "introspect.py",
+        "to": "backend/introspect.py"
+      },
+      {
+        "from": "static",
+        "to": "backend/static"
+      },
+      {
+        "from": "vendor/uv/${platform}-${arch}",
+        "to": "bin"
+      },
+      {
+        "from": "LICENSE",
+        "to": "LICENSE.txt"
+      },
+      {
+        "from": "THIRD-PARTY-NOTICES.md",
+        "to": "THIRD-PARTY-NOTICES.md"
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.utilities",
+      "extendInfo": {
+        "NSDesktopFolderUsageDescription": "To open phone backups or reports you saved on the Desktop.",
+        "NSDocumentsFolderUsageDescription": "To save scan results in Documents/MVT Results.",
+        "NSDownloadsFolderUsageDescription": "To open phone reports you downloaded."
+      }
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Utility"
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
+  }
+}

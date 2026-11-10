@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="mvt-token" content="__TOKEN__">
+<title>Easy MVT</title>
+<style>
+  :root {
+    --bg: #000; --panel: #050805; --ink: #f2f2f2; --muted: #8a8a8a; --line: #1d3a1d;
+    --green: #00ff41; --green-dim: #0b8f2a; --green-bg: rgba(0,255,65,.07);
+    --red: #ff2b2b; --red-bg: rgba(255,43,43,.09);
+    --orange: #ff9f1a; --orange-bg: rgba(255,159,26,.08);
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; color: var(--ink); font: 15.5px/1.6 var(--mono); }
+  body::after { /* faint CRT scanlines */
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50;
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,.018) 0 1px, transparent 1px 3px); }
+  ::selection { background: var(--green); color: #000; }
+  a { color: var(--green); }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+           padding: 14px 24px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #000; z-index: 5; }
+  .brand { color: var(--green); font-weight: 700; letter-spacing: .5px; text-shadow: 0 0 8px rgba(0,255,65,.45); }
+  .brand .cur { animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  main { max-width: 860px; margin: 0 auto; padding: 36px 24px 90px; }
+  h1 { font-size: 24px; line-height: 1.3; margin: 0 0 10px; color: var(--green); text-shadow: 0 0 10px rgba(0,255,65,.35); }
+  h1::before { content: "> "; color: var(--green-dim); }
+  h2 { font-size: 16px; margin: 34px 0 12px; color: var(--green); text-transform: uppercase; letter-spacing: 1px; }
+  h2::before { content: "## "; color: var(--green-dim); }
+  p.lead { color: var(--ink); opacity: .85; margin: 0 0 26px; }
+  .hidden { display: none !important; }
+  .evil { color: var(--red); }
+  .ok { color: var(--green); }
+  .muted, .note { color: var(--muted); }
+  .note { font-size: 13.5px; margin-top: 6px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .choice { background: var(--panel); border: 1px solid var(--line); padding: 18px 20px; cursor: pointer;
+            text-align: left; font: inherit; color: inherit; width: 100%; transition: border-color .12s, background .12s; }
+  .choice:hover { border-color: var(--green); background: var(--green-bg); }
+  .choice.selected { border-color: var(--green); box-shadow: 0 0 0 1px var(--green), 0 0 18px rgba(0,255,65,.18); }
+  .choice b { display: block; color: var(--green); margin-bottom: 2px; }
+  .choice b::before { content: "[ ] "; color: var(--green-dim); }
+  .choice.selected b::before { content: "[x] "; color: var(--green); }
+  .choice span { color: var(--muted); font-size: 14px; }
+  .tag { font-size: 11px; padding: 0 6px; margin-left: 6px; border: 1px solid var(--green); color: var(--green); vertical-align: middle; }
+  .card { border: 1px solid var(--line); background: var(--panel); padding: 18px 20px; margin-bottom: 14px; }
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  button.btn { font: inherit; font-weight: 700; padding: 10px 18px; cursor: pointer; background: transparent;
+               color: var(--green); border: 1px solid var(--green); letter-spacing: .3px; }
+  button.btn::before { content: "[ "; } button.btn::after { content: " ]"; }
+  button.btn:hover:not(:disabled) { background: var(--green); color: #000; box-shadow: 0 0 14px rgba(0,255,65,.5); }
+  button.btn:disabled { opacity: .3; cursor: not-allowed; }
+  button.btn.secondary { color: var(--ink); border-color: #444; }
+  button.btn.secondary:hover:not(:disabled) { background: var(--ink); color: #000; box-shadow: none; }
+  button.btn.big { font-size: 17px; padding: 13px 26px; }
+  button.link { background: none; border: 0; color: var(--green); text-decoration: underline; text-underline-offset: 3px;
+                cursor: pointer; font: inherit; padding: 0; }
+  button.link:hover { color: #fff; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 20px; }
+  .back { margin-bottom: 18px; }
+  details.help { border: 1px dashed var(--line); padding: 12px 16px; margin: 16px 0; }
+  details.help summary { cursor: pointer; color: var(--green); }
+  details.help ol { margin: 10px 0 4px; padding-left: 22px; }
+  details.help li { margin-bottom: 6px; }
+  b, strong { color: #fff; }
+  label.field { display: block; color: var(--green); margin: 18px 0 6px; }
+  input[type=text], input[type=password] { width: 100%; font: inherit; padding: 10px 12px; color: var(--green);
+               background: #000; border: 1px solid var(--line); caret-color: var(--green); }
+  input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 10px rgba(0,255,65,.25); }
+  .picked { padding: 10px 14px; border: 1px solid var(--line); margin-top: 12px; word-break: break-all; font-size: 14px; color: var(--green); }
+  .picked::before { content: "→ "; }
+  .alert { border: 1px solid; padding: 12px 16px; margin: 16px 0; }
+  .alert.error { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+  .alert.error::before { content: "ERROR: "; font-weight: 700; }
+  .alert.info { border-color: #444; }
+  /* progress */
+  .steps { list-style: none; padding: 0; margin: 22px 0; }
+  .steps li { padding: 6px 0; color: var(--muted); }
+  .steps li::before { content: "[    ] "; white-space: pre; }
+  .steps li.active { color: var(--green); }
+  .steps li.active::before { content: "[" attr(data-spin) "] "; }
+  .steps li.done { color: var(--ink); } .steps li.done::before { content: "[ OK ] "; color: var(--green); }
+  .steps li.fail { color: var(--red); } .steps li.fail::before { content: "[FAIL] "; }
+  .elapsed { color: var(--muted); }
+  /* verdict */
+  .verdict { border: 1px solid; padding: 26px 28px; margin-bottom: 18px; }
+  .verdict .stamp { font-weight: 700; letter-spacing: 3px; font-size: 13px; }
+  .verdict h1::before { content: ""; }
+  .verdict.ok { border-color: var(--green); background: var(--green-bg); }
+  .verdict.bad { border-color: var(--red); background: var(--red-bg); box-shadow: 0 0 30px rgba(255,43,43,.18); }
+  .verdict.bad h1, .verdict.bad .stamp { color: var(--red); text-shadow: 0 0 10px rgba(255,43,43,.5); }
+  .verdict.neutral { border-color: #666; } .verdict.neutral h1 { color: #fff; text-shadow: none; }
+  .area { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .area:last-child { border: 0; }
+  .status { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+            margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line); }
+  /* "what does this check" */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0; }
+  .stat { border: 1px solid var(--line); padding: 14px; } .stat b { display: block; font-size: 26px; color: var(--green); }
+  .stat.red b { color: var(--red); }
+  .threat { border: 1px solid #3a1414; border-left: 3px solid var(--red); padding: 14px 18px; margin-bottom: 10px; background: #070202; }
+  .threat .t-name { color: var(--red); font-weight: 700; font-size: 16px; }
+  .threat .t-meta { color: var(--muted); font-size: 13px; }
+  .threat p { margin: 6px 0; font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { font-size: 12px; border: 1px solid #333; padding: 1px 7px; color: var(--ink); }
+  .chip b { color: var(--green); }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tabs button.on { background: var(--green); color: #000; }
+  .method { border: 1px solid var(--line); padding: 14px 18px; margin-bottom: 10px; }
+  .method .m-title { color: var(--green); font-weight: 700; }
+  .method .m-count { float: right; color: var(--red); font-size: 13px; }
+  table.mods { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.mods td { padding: 7px 8px; border-bottom: 1px dashed var(--line); vertical-align: top; }
+  table.mods td:first-child { color: var(--green); white-space: nowrap; }
+  ol.how { padding-left: 0; list-style: none; counter-reset: s; }
+  ol.how li { counter-increment: s; margin-bottom: 10px; padding-left: 44px; position: relative; }
+  ol.how li::before { content: "0" counter(s); position: absolute; left: 0; color: var(--green); font-weight: 700; }
+  /* terminal */
+  body.term-open { padding-bottom: 46vh; }
+  .term { position: fixed; left: 0; right: 0; bottom: 0; height: 44vh; background: #000; border-top: 1px solid var(--green);
+          display: flex; flex-direction: column; z-index: 10; box-shadow: 0 -10px 40px rgba(0,255,65,.12); }
+  .term-bar { display: flex; justify-content: space-between; padding: 6px 16px; font-size: 12.5px;
+              border-bottom: 1px solid var(--line); color: var(--green-dim); }
+  pre.log { flex: 1; margin: 0; padding: 12px 16px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+            font: 12.5px/1.5 var(--mono); color: #b9b9b9; }
+  pre.log .c { color: var(--green); } pre.log .h { color: #fff; font-weight: 700; }
+  pre.log .w { color: #ffd166; } pre.log .e { color: var(--red); }
+  .term-input { display: flex; gap: 8px; align-items: center; padding: 6px 12px; border-top: 1px solid var(--line); color: var(--green); }
+  .term-input input { flex: 1; background: transparent; border: 0; color: var(--green); font: 13px var(--mono); padding: 8px 4px; box-shadow: none !important; }
+  .term-input .btn { padding: 4px 12px; font-size: 13px; }
+  /* guide */
+  .guide h3 { color: #fff; font-size: 16px; margin: 0 0 8px; }
+  .step { display: grid; grid-template-columns: 300px 1fr; gap: 26px; align-items: start;
+          border-top: 1px dashed var(--line); padding: 24px 0; break-inside: avoid; }
+  @media (max-width: 760px) { .step { grid-template-columns: 1fr; } }
+  .step .txt p, .step .txt li { font-size: 14.5px; }
+  .step ul, .step ol { padding-left: 20px; margin: 6px 0; } .step li { margin-bottom: 5px; }
+  li.dont::marker { content: "✗  "; color: var(--red); }
+  .fig { border: 1px solid var(--line); background: var(--panel); padding: 10px; color: var(--green); }
+  .fig svg { width: 100%; height: auto; display: block; fill: none; stroke: currentColor; stroke-width: 1.6;
+             stroke-linecap: round; stroke-linejoin: round; }
+  .fig svg text { fill: #cfcfcf; stroke: none; font: 11px var(--mono); }
+  .fig svg text.strong { fill: #fff; font-weight: 700; }
+  .fig svg .hl { stroke: var(--green); stroke-width: 2.4; filter: drop-shadow(0 0 4px rgba(0,255,65,.6)); }
+  .fig svg .red { stroke: var(--red); stroke-width: 2.4; } .fig svg text.red { fill: var(--red); stroke: none; }
+  .fig svg .fillc { fill: currentColor; stroke: none; }
+  .fig svg .fillbg { fill: #000; }
+  .checklist label { display: block; margin: 6px 0; cursor: pointer; }
+  .checklist input { accent-color: var(--green); margin-right: 8px; }
+  table.cmp { border-collapse: collapse; font-size: 13.5px; margin: 8px 0 12px; width: 100%; }
+  table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 6px 8px; text-align: center; }
+  table.cmp td:first-child { text-align: left; } table.cmp th { color: var(--green); }
+  table.cmp .red { color: var(--red); }
+  code { color: var(--green); }
+  @media print {
+    body::after, header, footer, .term, .noprint, #globalError { display: none !important; }
+    html, body { background: #fff; color: #000; font-size: 11pt; }
+    body.term-open { padding-bottom: 0; }
+    main { padding: 0; max-width: none; }
+    main > section { display: none !important; } main > #v-guide { display: block !important; }
+    h1, h2, .guide h3, b, strong, code, table.cmp th { color: #000 !important; text-shadow: none !important; }
+    .muted, .note { color: #444 !important; }
+    .fig, .card, details.help, .step { border-color: #999 !important; background: #fff !important; color: #000 !important; }
+    .fig svg text { fill: #000 !important; } .fig svg .hl { stroke: #000; filter: none; stroke-width: 3; }
+    .fig svg .red, table.cmp .red, li.dont::marker { stroke: #c00; color: #c00; } .fig svg text.red { fill: #c00 !important; }
+    .fig svg .fillbg { fill: #fff; }
+    details.help { display: block; } details.help > *:not(summary) { display: block; }
+    .tag { border-color: #000; color: #000; }
+  }
+  .verdict.warn { border-color: var(--orange); background: var(--orange-bg); }
+  .verdict.warn h1, .verdict.warn .stamp { color: var(--orange); text-shadow: 0 0 10px rgba(255,159,26,.4); }
+  .fcount { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; }
+  .fcount span { border: 1px solid; padding: 1px 8px; }
+  .fcount .review, .fcount .minor { border-color: var(--orange); color: var(--orange); }
+  .fcount .info { border-color: #777; color: #ccc; }
+  .finding { border: 1px solid #2a2a2a; border-left: 3px solid #777; padding: 12px 16px; margin-top: 10px; background: #070707; }
+  .finding.review, .finding.minor { border-left-color: var(--orange); background: #0a0702; }
+  .finding .f-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .finding .f-name { font-weight: 700; color: #fff; }
+  .finding .f-badge { font-size: 11px; padding: 0 7px; border: 1px solid #777; color: #ccc; white-space: nowrap; }
+  .finding.review .f-badge, .finding.minor .f-badge { border-color: var(--orange); color: var(--orange); }
+  .finding .f-sum { margin: 6px 0; }
+  .finding .f-sum.good::after { content: "  ✓"; color: var(--green); }
+  .finding .f-sub { color: var(--muted); font-size: 13.5px; margin: 4px 0; }
+  .finding .f-sub b { color: var(--ink); font-weight: 600; }
+  .finding details { margin-top: 6px; font-size: 13.5px; }
+  .finding summary { cursor: pointer; color: var(--green); }
+  .finding ul.f-entries { margin: 6px 0 0; padding-left: 18px; max-height: 280px; overflow: auto; }
+  .finding ul.f-entries li { word-break: break-word; }
+  .finding ul.f-entries .t { color: var(--muted); margin-right: 8px; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 0 24px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">easy-mvt<span class="cur">_</span></div>
+  <span class="row" style="margin:0">
+    <button class="btn secondary" data-go="guide">Guide</button>
+    <button class="btn secondary" data-go="about">What does it check?</button>
+    <button class="btn secondary" id="termToggle" title="Show the commands being run">Terminal</button>
+    <button class="btn secondary" id="quitBtn" title="Close the scanner">Quit</button>
+  </span>
+</header>
+
+<main>
+  <!-- ========== Setup ========== -->
+  <section id="v-setup" class="hidden">
+    <h1>One-time setup</h1>
+    <p class="lead">One click downloads everything the scanner needs. It takes a few minutes and needs an internet connection.</p>
+    <div class="card">
+      <div class="area"><span>Private Python 3.12 runtime <span class="muted">(via uv, checksum-verified)</span></span><b>~25 MB</b></div>
+      <div class="area"><span>MVT command-line tools <span class="muted">(Amnesty International Security Lab)</span></span><b>~15 MB</b></div>
+      <div class="area"><span>Latest list of known <span class="evil">spyware</span> indicators</span><b>~5 MB</b></div>
+    </div>
+    <div class="row"><button class="btn big" id="setupBtn">Install everything</button></div>
+    <p class="note">Everything goes into the scanner's own folder. Nothing else on your computer is changed.
+      Open the Terminal panel (top right) to watch every command as it runs.</p>
+  </section>
+
+  <!-- ========== Home ========== -->
+  <section id="v-home" class="hidden">
+    <h1>Check a phone for spyware</h1>
+    <p class="lead">Looks for traces of known <span class="evil">mercenary spyware</span> such as
+      <span class="evil">Pegasus</span> and <span class="evil">Predator</span>.
+      Everything happens on this computer. Nothing is uploaded.</p>
+    <h2>Which phone?</h2>
+    <div class="grid">
+      <button class="choice" data-go="iphone"><b>iPhone</b><span>Checks a backup of the iPhone made on this computer.</span></button>
+      <button class="choice" data-go="android"><b>Android</b><span>Checks a report file created on the phone.</span></button>
+    </div>
+    <div class="row">
+      <button class="link" data-go="guide">First time? Read the preparation guide (with pictures)</button>
+      <span class="muted">·</span>
+      <button class="link" data-go="about">What exactly is checked, and how?</button>
+      <span class="muted">·</span>
+      <button class="link" id="openResultsBtn">Open earlier results</button>
+    </div>
+    <div class="status">
+      <div>tools &amp; indicators<br><span class="note" id="updStatus"></span></div>
+      <button class="btn" id="updateBtn">Update everything</button>
+    </div>
+  </section>
+
+  <!-- ========== iPhone ========== -->
+  <section id="v-iphone" class="hidden">
+    <div class="back"><button class="link" data-go="home">&lt; back</button></div>
+    <h1>Choose the iPhone backup</h1>
+    <p class="lead">Backups made on this Mac by Finder or iTunes:</p>
+
+    <div id="ibLoading" class="note">scanning for backups…</div>
+    <div id="ibList" class="list"></div>
+
+    <div id="ibPermission" class="alert info hidden">
+      <b>The Mac needs your permission to see iPhone backups.</b><br>
+      Open <i>System Settings → Privacy &amp; Security → Full Disk Access</i> and turn on
+      <b>Easy MVT</b> (or <b>Python</b>). Then click “look again”.
+      <div class="row" style="margin-top:12px">
+        <button class="btn secondary" id="ibSettingsBtn">Open System Settings</button>
+        <button class="btn secondary" id="ibRetryBtn">Look again</button>
+      </div>
+    </div>
+    <div id="ibNone" class="alert info hidden"><b>No iPhone backup found on this Mac.</b> Follow the steps below to make one.
+      Made the backup on another computer or have it on a USB stick? Click <b>“the backup is somewhere else…”</b> below
+      (<button class="link" data-go="guide">guide, step 2.6</button>).</div>
+
+    <div class="alert info"><b>Not prepared yet?</b> Read the <button class="link" data-go="guide">preparation guide</button>:
+      Airplane Mode, cable connection, encrypted backup, all with pictures.</div>
+    <details class="help" id="ibHelp">
+      <summary>How do I make an iPhone backup? (short version)</summary>
+      <ol>
+        <li>Connect the iPhone to this Mac with a cable. If the phone asks, tap <b>Trust</b>.</li>
+        <li>Open <b>Finder</b> and click the iPhone in the sidebar (on older Macs, open iTunes).</li>
+        <li>Choose <b>“Back up all of the data on your iPhone to this Mac”</b>.</li>
+        <li>Tick <b>“Encrypt local backup”</b> and choose a password you will remember.
+            Encrypted backups contain more information, so the check is more thorough.</li>
+        <li>Click <b>Back Up Now</b> and wait until it finishes. Then click “look again”.</li>
+      </ol>
+    </details>
+    <div class="row">
+      <button class="link" id="ibRetry2Btn">look again</button>
+      <span class="muted">·</span>
+      <button class="link" id="ibPickBtn">the backup is somewhere else…</button>
+    </div>
+
+    <div id="ibSelected" class="card hidden" style="margin-top:24px">
+      <div><b id="ibSelName"></b> <span id="ibSelLock" class="muted"></span></div>
+      <div class="note" id="ibSelMeta"></div>
+      <div id="ibPwWrap" class="hidden">
+        <label class="field" for="ibPw">backup password:</label>
+        <input type="password" id="ibPw" autocomplete="off" placeholder="the password you chose when encrypting the backup">
+        <div class="note">This is not the phone's passcode. It's the password set in Finder/iTunes. It is never stored.</div>
+      </div>
+      <div class="row"><button class="btn big" id="ibScanBtn">Start the check</button></div>
+    </div>
+  </section>
+
+  <!-- ========== Android ========== -->
+  <section id="v-android" class="hidden">
+    <div class="back"><button class="link" data-go="home">&lt; back</button></div>
+    <h1>What do you have from the Android phone?</h1>
+    <p class="lead">Pick one. If you are not sure, use the bug report.</p>
+    <div class="list">
+      <button class="choice" data-amode="bugreport"><b>A bug report file <span class="tag">EASIEST</span></b>
+        <span>A .zip file the phone can create by itself.</span></button>
+      <button class="choice" data-amode="androidqf"><b>An AndroidQF collection</b>
+        <span>A folder or .zip made with the AndroidQF tool. Most thorough.</span></button>
+    </div>
+    <div class="alert info"><b>Not prepared yet?</b> Read the <button class="link" data-go="guide">preparation guide</button>
+      for step-by-step pictures.</div>
+    <details class="help" id="aHelpBug">
+      <summary>How do I create a bug report on the phone? (short version)</summary>
+      <ol>
+        <li>Open <b>Settings → About phone</b> and tap <b>Build number</b> 7 times until it says you are a developer.</li>
+        <li>Go to <b>Settings → System → Developer options</b> (the location can vary by brand).</li>
+        <li>Tap <b>Take bug report → Full report</b>. Wait a few minutes for the notification.</li>
+        <li>Tap the notification and send the .zip to this computer: by cable, by email to yourself, or with cloud storage.</li>
+        <li>When you're done, you can turn Developer options off again.</li>
+      </ol>
+    </details>
+    <details class="help hidden" id="aHelpQf">
+      <summary>What is AndroidQF?</summary>
+      <p>AndroidQF is a free collection tool, also from Amnesty International's Security Lab. It runs with the phone
+         connected to a computer and saves a folder of data. If a digital-security helpline helped you collect data,
+         it is probably an AndroidQF folder. Choose that folder (or its .zip) below.</p>
+    </details>
+    <div id="aSelected" class="card hidden" style="margin-top:20px">
+      <div class="row" style="margin-top:0">
+        <button class="btn secondary" id="aPickFileBtn">Choose file…</button>
+        <button class="btn secondary hidden" id="aPickFolderBtn">Choose folder…</button>
+      </div>
+      <input type="text" id="aManual" class="hidden" placeholder="paste the full path of the file or folder" style="margin-top:12px">
+      <div class="picked hidden" id="aPicked"><span id="aPickedPath"></span></div>
+      <div id="aPwWrap" class="hidden">
+        <label class="field" for="aPw">backup password (only if you set one):</label>
+        <input type="password" id="aPw" autocomplete="off">
+      </div>
+      <div class="row"><button class="btn big" id="aScanBtn" disabled>Start the check</button></div>
+    </div>
+  </section>
+
+  <!-- ========== Running ========== -->
+  <section id="v-run" class="hidden">
+    <h1 id="runTitle">Checking…</h1>
+    <p class="lead">This usually takes a few minutes. You can keep using your computer, but don't close this window.</p>
+    <ul class="steps" id="runSteps"></ul>
+    <div class="row">
+      <button class="btn secondary" id="cancelBtn">Stop</button>
+      <span class="elapsed" id="elapsed"></span>
+      <button class="link" id="runTermBtn">show what's happening</button>
+    </div>
+  </section>
+
+  <!-- ========== Result ========== -->
+  <section id="v-result" class="hidden">
+    <div class="verdict" id="verdict">
+      <div class="stamp" id="vStamp"></div>
+      <h1 id="vTitle"></h1>
+      <div id="vText"></div>
+    </div>
+    <div class="card hidden" id="vAreas"><b class="evil">Where the traces were found</b><div id="vAreaList" style="margin-top:8px"></div></div>
+    <div class="card hidden" id="vFindings">
+      <b>Findings explained</b>
+      <div class="note">Everything MVT flagged that is <i>not</i> a spyware match. Orange = minor or unusual, worth a look.
+        Grey = information only. Click “show entries” to see the details.</div>
+      <div class="fcount" id="vFindCount"></div>
+      <div id="vFindList"></div>
+    </div>
+    <div class="row">
+      <button class="btn" id="vHomeBtn">Check another phone</button>
+      <button class="btn secondary" id="vRetryBtn">Try again</button>
+      <button class="btn secondary" id="vRevealBtn">Show result files</button>
+      <button class="link" data-go="about">what was checked?</button>
+    </div>
+    <p class="note">The result folder contains the data MVT read from the phone (messages, browsing
+      history, contacts…), <b>unencrypted</b>. Keep it safe, share it only with people you trust,
+      and delete it when you no longer need it.</p>
+  </section>
+
+  <!-- ========== What does it check? ========== -->
+  <section id="v-about" class="hidden">
+    <div class="back"><button class="link" data-go="home">&lt; back</button></div>
+    <h1>What this scanner checks, and how</h1>
+    <p class="lead">Full transparency: below are the exact <span class="evil">spyware</span> families on the list, the kinds
+      of traces they leave, and every check that runs on your data. It is all read live from the installed tools.</p>
+
+    <h2>How it works</h2>
+    <ol class="how">
+      <li><b>Copy.</b> The phone's data is copied to this computer (iPhone backup, Android bug report or AndroidQF).
+          The phone itself is not changed.</li>
+      <li><b>Extract.</b> MVT reads specific records from that copy: messages, browsing history, installed apps,
+          network and battery logs, system diagnostics, and more (full list below).</li>
+      <li><b>Compare.</b> Every web address, program name, file, app and account it finds is compared with
+          <i>indicators of compromise</i>: traces that researchers found on phones confirmed to be infected.</li>
+      <li><b>Report.</b> Any match is reported. No match means no <i>known</i> trace was found.</li>
+    </ol>
+    <div class="alert info">
+      <b>What it cannot do.</b> MVT doesn't test the phone for vulnerabilities or exploits, and it can't spot spyware
+      nobody has documented yet. It looks for the <i>aftermath</i> of known attacks: the links, servers, process names and
+      files that specific spyware left behind on other victims' phones. A clean result is good news, not a guarantee.
+      Spyware sometimes erases its own traces.
+    </div>
+
+    <div id="aboutLoading" class="note">reading indicator files…</div>
+    <div id="aboutBody" class="hidden">
+      <div class="stats">
+        <div class="stat red"><b id="stFam">–</b>spyware families &amp; campaigns</div>
+        <div class="stat red"><b id="stIoc">–</b>known traces (indicators)</div>
+        <div class="stat"><b id="stMod">–</b>checks in this MVT version</div>
+      </div>
+      <div class="note" id="stUpd"></div>
+
+      <h2>The <span class="evil">threats</span> on the list</h2>
+      <p class="muted">Each set was published by researchers after confirmed infections. Click a source to see the raw data.</p>
+      <div id="threats"></div>
+
+      <h2>How each kind of trace is looked for</h2>
+      <div class="tabs" id="scanTabs"></div>
+      <div id="methods"></div>
+
+      <h2>Every check that runs</h2>
+      <p class="muted">These are the MVT modules for the selected scan type, with the trace types each one compares.
+         Modules marked “context only” collect data for the timeline in the result files, without comparing it.</p>
+      <table class="mods" id="modTable"></table>
+      <p class="note" id="aboutErr"></p>
+    </div>
+  </section>
+
+  <!-- ========== Preparation guide ========== -->
+  <section id="v-guide" class="hidden guide">
+    <div class="back noprint"><button class="link" data-go="home">&lt; back</button></div>
+    <h1>Preparing the phone: a step-by-step guide</h1>
+    <p class="lead">Read this before you connect the phone. It takes about 15 minutes, plus the time the backup needs.
+      Nothing in this guide deletes anything from the phone.</p>
+    <div class="row noprint" style="margin-top:0">
+      <button class="btn secondary" data-scroll="g-before">1 · Before you start</button>
+      <button class="btn secondary" data-scroll="g-iphone">2 · iPhone</button>
+      <button class="btn secondary" data-scroll="g-android">3 · Android</button>
+      <button class="btn secondary" data-scroll="g-after">4 · Afterwards</button>
+      <button class="btn" data-print>Print guide</button>
+    </div>
+
+    <!-- ===== 1. Before you start ===== -->
+    <h2 id="g-before">1 · Before you start</h2>
+
+    <div class="checklist card">
+      <b>You will need:</b>
+      <label><input type="checkbox"> The phone, charged to at least 50 %</label>
+      <label><input type="checkbox"> The phone's passcode (to unlock it and to confirm “Trust”)</label>
+      <label><input type="checkbox"> A USB cable you trust, ideally the original one</label>
+      <label><input type="checkbox"> This computer, plugged into power, with enough free disk space (about as much as the phone's used storage)</label>
+      <label><input type="checkbox"> A quiet, private place and about one hour</label>
+      <label><input type="checkbox"> Your SIM PIN, if you plan to take the SIM card out (step 1.3)</label>
+    </div>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <!-- phone with a big X over reset/update/delete -->
+        <rect x="40" y="20" width="90" height="155" rx="14"/><line x1="70" y1="30" x2="100" y2="30"/>
+        <text class="red" x="56" y="80">✗</text><text x="70" y="80">RESET</text>
+        <text class="red" x="56" y="104">✗</text><text x="70" y="104">UPDATE</text>
+        <text class="red" x="56" y="128">✗</text><text x="70" y="128">DELETE</text>
+        <text x="170" y="70">evidence lives</text><text x="170" y="90">in logs, messages</text><text x="170" y="110">and app data:</text>
+        <text class="red" x="170" y="138">don't touch it yet</text>
+      </svg></div>
+      <div class="txt">
+        <h3>1.1 · Don't change anything on the phone yet</h3>
+        <p>Spyware traces are hidden in ordinary records: messages, browser history, system logs. Until the check is done:</p>
+        <ul>
+          <li class="dont">Don't <b>factory-reset</b> or wipe the phone.</li>
+          <li class="dont">Don't <b>update</b> the operating system.</li>
+          <li class="dont">Don't <b>delete</b> suspicious messages, links or apps.</li>
+          <li class="dont">Don't install “anti-spyware” apps from app stores.</li>
+        </ul>
+        <p class="note">If you think someone is actively watching you, don't talk about your suspicion on or near this phone.
+          Contact helpers from a different device.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <rect x="95" y="15" width="130" height="165" rx="16"/>
+        <!-- control centre style tiles -->
+        <rect class="hl" x="112" y="40" width="44" height="44" rx="10"/>
+        <path class="fillc" d="M134 50 l4 12 l12 4 l0 4 l-12 -2 l-1 10 l4 3 l0 3 l-7 -2 l-7 2 l0 -3 l4 -3 l-1 -10 l-12 2 l0 -4 l12 -4 z"/>
+        <rect x="164" y="40" width="44" height="44" rx="10"/>
+        <path d="M174 66 q12 -14 24 0 M179 71 q7 -8 14 0"/><circle class="fillc" cx="186" cy="76" r="2"/>
+        <line class="red" x1="170" y1="80" x2="202" y2="46"/>
+        <rect x="112" y="92" width="44" height="44" rx="10"/><text x="134" y="119" text-anchor="middle">BT</text>
+        <line class="red" x1="118" y1="130" x2="150" y2="98"/>
+        <rect x="164" y="92" width="44" height="44" rx="10"/><text x="186" y="119" text-anchor="middle">4G</text>
+        <line class="red" x1="170" y1="130" x2="202" y2="98"/>
+        <text x="160" y="162" text-anchor="middle">airplane: ON</text>
+        <text x="62" y="66">ON →</text>
+      </svg></div>
+      <div class="txt">
+        <h3>1.2 · Switch on Airplane Mode</h3>
+        <p>This cuts the phone off from the internet, so nobody can remotely send commands to the spyware
+          (some spyware can erase itself) while you prepare.</p>
+        <ul>
+          <li><b>iPhone:</b> swipe down from the top-right corner and tap the <b>airplane</b>. Make sure Wi-Fi and Bluetooth are off too
+            (on iPhone, tapping them in Control Centre only disconnects; turn them off in <i>Settings</i>).</li>
+          <li><b>Android:</b> swipe down twice from the top and tap <b>Airplane mode</b>.</li>
+        </ul>
+        <p class="note">Airplane Mode doesn't affect the cable connection. The backup works normally.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <!-- side view of phone, tray sliding out, pin -->
+        <rect x="20" y="70" width="230" height="40" rx="14"/>
+        <rect class="hl" x="150" y="100" width="70" height="40" rx="4"/>
+        <rect x="160" y="108" width="30" height="24" rx="3"/><line x1="166" y1="114" x2="184" y2="114"/><line x1="166" y1="120" x2="184" y2="120"/><line x1="166" y1="126" x2="184" y2="126"/>
+        <circle cx="210" cy="120" r="3"/>
+        <line x1="290" y1="160" x2="214" y2="124"/><circle cx="296" cy="163" r="7"/>
+        <text x="20" y="40">pin → small hole → tray pops out</text>
+        <text x="20" y="175">eSIM? nothing to remove</text>
+      </svg></div>
+      <div class="txt">
+        <h3>1.3 · Optional: take out the SIM card</h3>
+        <p>For extra certainty you can also remove the SIM card. The phone then can't use the mobile network
+          even if Airplane Mode gets switched off by mistake.</p>
+        <ol>
+          <li>Find the small tray on the side of the phone with a tiny hole next to it.</li>
+          <li>Push the SIM tool (or a straightened paper clip) firmly into the hole. The tray slides out.</li>
+          <li>Take the SIM out, put the empty tray back, and keep the SIM somewhere safe.</li>
+        </ol>
+        <p class="note">Many new iPhones use an <b>eSIM</b> with no card to remove. Airplane Mode is enough there.
+          When you put the SIM back later, the phone may ask for the SIM PIN.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <!-- laptop with shield, phone, one-way arrow (data flows phone -> computer) -->
+        <rect x="20" y="45" width="130" height="85" rx="6"/><rect x="28" y="53" width="114" height="69"/>
+        <path d="M8 138 h154 l-10 12 h-134 z"/>
+        <path class="hl" d="M85 64 l22 8 v16 c0 14 -10 22 -22 27 c-12 -5 -22 -13 -22 -27 v-16 z"/>
+        <path class="hl" d="M75 89 l7 7 l14 -14"/>
+        <rect x="245" y="45" width="55" height="100" rx="10"/><line x1="262" y1="52" x2="283" y2="52"/>
+        <circle class="red" cx="272" cy="95" r="9"/><line class="red" x1="272" y1="90" x2="272" y2="96"/><circle class="red" cx="272" cy="100" r="0.8"/>
+        <path d="M238 95 h-66 M182 87 l-10 8 l10 8"/>
+        <text x="174" y="80">data only</text><text x="174" y="118">phone→Mac</text>
+        <text x="20" y="176">risk to the computer: very low</text>
+      </svg></div>
+      <div class="txt">
+        <h3>1.4 · Is it safe to connect a possibly infected phone to my computer?</h3>
+        <p><b>For most people, yes. The risk is very low.</b> Digital-security helplines routinely have people back up
+          possibly infected iPhones to their normal computer for exactly this check.</p>
+        <ul>
+          <li><b>Known spyware targets phones, not computers.</b> There is no public evidence that Pegasus, Predator or the
+            other spyware on the list spreads from a phone to a computer over a cable.</li>
+          <li><b>Data flows one way.</b> During a backup, the computer <i>reads</i> files from the phone through Apple's
+            own backup system. The phone can't make the computer run anything.</li>
+          <li><b>The backup is just data:</b> databases, settings and logs. Spyware traces inside it are records,
+            not programs running on your computer.</li>
+        </ul>
+        <p>In theory, an attacker could use an unknown security hole in the computer's USB or backup handling.
+          Such holes are rare and very expensive, and no case like this is known.</p>
+        <p><b>Good habits:</b></p>
+        <ul>
+          <li>Keep your computer's system updated.</li>
+          <li><b>At high risk?</b> (e.g. journalists with sensitive sources on their computer, activists under active
+            surveillance) If possible, use a spare computer or a separate user account just for this check,
+            and delete the backup afterwards (see step 4).</li>
+          <li><b>Android:</b> the bug report can be sent from the phone without any cable at all (step 3.3).</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===== 2. iPhone ===== -->
+    <h2 id="g-iphone">2 · iPhone: make a backup on this Mac</h2>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <!-- laptop -->
+        <rect x="20" y="40" width="140" height="90" rx="6"/><rect x="28" y="48" width="124" height="74"/>
+        <path d="M8 138 h164 l-10 12 h-144 z"/>
+        <!-- phone -->
+        <rect x="245" y="45" width="55" height="100" rx="10"/><line x1="262" y1="52" x2="283" y2="52"/>
+        <!-- cable -->
+        <path class="hl" d="M172 128 C 205 128, 215 175, 272 160 L 272 145"/>
+        <rect class="fillc" x="268" y="145" width="8" height="5"/>
+        <text x="190" y="105">USB</text>
+        <!-- crossed wifi -->
+        <path d="M188 40 q22 -22 44 0 M196 48 q14 -13 28 0"/><circle class="fillc" cx="210" cy="56" r="2.5"/>
+        <line class="red" x1="186" y1="62" x2="234" y2="22"/>
+        <text x="150" y="182">cable, not Wi-Fi sync</text>
+      </svg></div>
+      <div class="txt">
+        <h3>2.1 · Connect the iPhone with a cable</h3>
+        <p>Always use a <b>wired connection</b>. Wi-Fi syncing is slower, less reliable, and needs a network,
+          which we just switched off.</p>
+        <ul>
+          <li>Plug the cable into the Mac directly, not through a hub or a public charging station.</li>
+          <li>Unlock the iPhone and keep it unlocked while you start the backup.</li>
+          <li>Don't unplug it until the backup has finished.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <rect x="95" y="10" width="130" height="172" rx="16"/>
+        <rect x="108" y="52" width="104" height="92" rx="10"/>
+        <text x="160" y="74" text-anchor="middle">Trust This</text><text x="160" y="90" text-anchor="middle">Computer?</text>
+        <line x1="108" y1="104" x2="212" y2="104"/>
+        <rect class="hl" x="114" y="110" width="92" height="14" rx="3"/><text class="strong" x="160" y="121" text-anchor="middle">Trust</text>
+        <text x="160" y="139" text-anchor="middle">Don't Trust</text>
+        <text x="236" y="120">← tap</text>
+        <text x="160" y="170" text-anchor="middle">then: passcode</text>
+      </svg></div>
+      <div class="txt">
+        <h3>2.2 · Tap “Trust” on the iPhone</h3>
+        <p>The first time you connect, the iPhone asks <b>“Trust This Computer?”</b>. Tap <b>Trust</b> and enter the phone's passcode.
+          This only allows <i>this</i> Mac to read the phone. You can undo it later (see step 4).</p>
+        <p class="note">No question appears? The phone may already trust this Mac. That's fine, continue.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="fig wide"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <!-- generic window -->
+        <rect x="5" y="5" width="310" height="180" rx="8"/><line x1="5" y1="24" x2="315" y2="24"/>
+        <circle cx="18" cy="14" r="3"/><circle cx="29" cy="14" r="3"/><circle cx="40" cy="14" r="3"/>
+        <line x1="78" y1="24" x2="78" y2="185"/>
+        <text x="12" y="44">Locations</text><rect class="hl" x="9" y="52" width="64" height="16" rx="3"/><text class="strong" x="14" y="64">iPhone</text>
+        <text x="88" y="44" class="strong">General</text><text x="140" y="44">Music</text><text x="186" y="44">Photos …</text>
+        <line x1="88" y1="50" x2="128" y2="50"/>
+        <text x="88" y="72">Backups:</text>
+        <circle cx="96" cy="88" r="5"/><text x="106" y="92">Back up to iCloud</text>
+        <circle cx="96" cy="106" r="5"/><circle class="fillc" cx="96" cy="106" r="2.5"/><text class="strong" x="106" y="110">Back up all data to this Mac</text>
+        <rect class="hl" x="88" y="118" width="164" height="18" rx="3"/>
+        <rect x="93" y="122" width="10" height="10"/><path class="hl" d="M95 127 l3 3 l5 -7"/><text class="strong" x="108" y="131">Encrypt local backup</text>
+        <rect x="88" y="148" width="98" height="20" rx="4"/><text x="137" y="162" text-anchor="middle">Back Up Now</text>
+        <text class="red" x="258" y="131">← tick</text><text x="194" y="162">← then click</text>
+      </svg></div>
+      <div class="txt">
+        <h3>2.3 · Open Finder and set up the backup</h3>
+        <ol>
+          <li>Open <b>Finder</b> and click your <b>iPhone</b> in the left sidebar under “Locations”.
+            <span class="note">(On macOS before 10.15, open <b>iTunes</b> and click the small phone icon.)</span></li>
+          <li>In the <b>General</b> tab, choose <b>“Back up all of the data on your iPhone to this Mac”</b>.</li>
+          <li>Tick <b>“Encrypt local backup”</b> (strongly recommended, see 2.4).</li>
+          <li>Click <b>Back Up Now</b>.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <!-- two boxes: plain vs encrypted -->
+        <rect x="10" y="20" width="140" height="150" rx="6"/>
+        <text x="80" y="40" text-anchor="middle">not encrypted</text>
+        <rect class="fillc" x="25" y="55" width="110" height="10"/><rect class="fillc" x="25" y="72" width="110" height="10"/>
+        <rect x="25" y="89" width="110" height="10"/><rect x="25" y="106" width="110" height="10"/><rect x="25" y="123" width="110" height="10"/>
+        <text x="80" y="158" text-anchor="middle">less data</text>
+        <rect class="hl" x="170" y="20" width="140" height="150" rx="6"/>
+        <text class="strong" x="240" y="40" text-anchor="middle">encrypted</text>
+        <rect class="fillc" x="185" y="55" width="110" height="10"/><rect class="fillc" x="185" y="72" width="110" height="10"/>
+        <rect class="fillc" x="185" y="89" width="110" height="10"/><rect class="fillc" x="185" y="106" width="110" height="10"/><rect class="fillc" x="185" y="123" width="110" height="10"/>
+        <text class="strong" x="240" y="158" text-anchor="middle">more data ✓</text>
+      </svg></div>
+      <div class="txt">
+        <h3>2.4 · Encrypted or not? Choose encrypted</h3>
+        <table class="cmp">
+          <tr><th></th><th>Not encrypted</th><th>Encrypted <span class="tag">BEST</span></th></tr>
+          <tr><td>Messages, photos, app data</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Browsing history, call history, Wi-Fi &amp; network data, Health, saved passwords</td><td class="red">✗</td><td>✓</td></tr>
+          <tr><td>Quality of the spyware check</td><td>basic</td><td><b>thorough</b></td></tr>
+          <tr><td>Protected if the backup file is lost</td><td class="red">✗</td><td>✓</td></tr>
+        </table>
+        <p>When you tick “Encrypt local backup”, the Mac asks for a <b>password</b>:</p>
+        <ul>
+          <li>Choose one you will remember and <b>write it down</b>. The scanner needs it, and Apple can't recover it.</li>
+          <li>This is <b>not</b> the phone's passcode or your Apple ID password. It's only for this backup.</li>
+          <li>If the box was <b>already ticked</b>, a password was set earlier. Use that one.</li>
+        </ul>
+        <details class="help"><summary>I forgot the backup password</summary>
+          <p>On the iPhone go to <i>Settings → General → Transfer or Reset iPhone → Reset → <b>Reset All Settings</b></i>.
+            This removes the backup password <b>without deleting your data</b>, though settings such as Wi-Fi passwords,
+            wallpaper and display settings return to their defaults. Then set a new password in Finder.
+            Don't choose “Erase All Content and Settings”.</p>
+        </details>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <rect x="20" y="30" width="280" height="130" rx="8"/>
+        <text x="40" y="62">Backing up “iPhone”…</text>
+        <rect x="40" y="74" width="240" height="12" rx="6"/><rect class="fillc" x="40" y="74" width="150" height="12" rx="6"/>
+        <text class="red" x="40" y="108">do not unplug</text>
+        <line x1="40" y1="120" x2="280" y2="120" stroke-dasharray="4 4"/>
+        <text x="40" y="144">Latest backup to this Mac:</text><text class="strong" x="232" y="144">Today ✓</text>
+      </svg></div>
+      <div class="txt">
+        <h3>2.5 · Wait for the backup to finish</h3>
+        <p>A progress bar appears in the Finder sidebar next to the iPhone. Depending on how much is on the phone, this takes
+          5 minutes to over an hour. Leave the cable plugged in and the Mac awake.</p>
+        <p>It's done when Finder shows <b>“Latest backup to this Mac: Today …”</b>.</p>
+        <p class="note">Then open this scanner, choose <b>iPhone</b>, and the new backup appears in the list automatically.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <!-- Mac A -> USB stick -> Mac B -->
+        <rect x="10" y="50" width="80" height="54" rx="4"/><rect x="16" y="56" width="68" height="42"/>
+        <path d="M2 110 h96 l-6 8 h-84 z"/>
+        <text x="50" y="82" text-anchor="middle">backup</text>
+        <text x="50" y="140" text-anchor="middle">other Mac</text>
+        <!-- stick -->
+        <rect class="hl" x="128" y="66" width="62" height="26" rx="5"/>
+        <rect x="190" y="71" width="14" height="16" rx="1"/>
+        <line x1="194" y1="76" x2="200" y2="76"/><line x1="194" y1="82" x2="200" y2="82"/>
+        <path d="M150 74 v-2 a6 6 0 0 1 12 0 v2"/><rect x="147" y="74" width="18" height="12" rx="2"/>
+        <text x="166" y="112" text-anchor="middle">exFAT / APFS</text>
+        <path d="M96 79 h26 M114 73 l8 6 l-8 6"/>
+        <path d="M210 79 h14 M216 73 l8 6 l-8 6"/>
+        <!-- Mac B -->
+        <rect x="230" y="50" width="80" height="54" rx="4"/><rect x="236" y="56" width="68" height="42"/>
+        <path d="M222 110 h96 l-6 8 h-84 z"/>
+        <text x="270" y="82" text-anchor="middle">scan</text>
+        <text x="270" y="140" text-anchor="middle">this Mac</text>
+        <text class="red" x="160" y="174" text-anchor="middle">wipe the stick afterwards</text>
+      </svg></div>
+      <div class="txt">
+        <h3>2.6 · Option: backup made on another computer</h3>
+        <p>You can make the backup on one Mac and check it on another, for example by bringing it on a USB stick.
+          Use an <b>encrypted</b> backup for this: a stick is easily lost, and only an encrypted backup is protected by a password.</p>
+        <p><b>On the computer with the backup:</b></p>
+        <ol>
+          <li>In Finder, click the iPhone, then <b>Manage Backups…</b>. Right-click the backup and choose <b>Show in Finder</b>.</li>
+          <li>A folder with a long name like <code>00008110-001A2B3C…</code> is highlighted. Copy <b>that whole folder</b> to the stick.
+            Don't copy only its contents, and don't rename it.</li>
+          <li>Eject the stick properly before unplugging it.</li>
+        </ol>
+        <p><b>On this computer:</b> plug in the stick, open the scanner, choose <b>iPhone →
+          “the backup is somewhere else…”</b> and select the folder with the long name. If macOS asks whether the scanner may
+          access a removable volume, click <b>Allow</b>.</p>
+        <ul>
+          <li><b>Stick format:</b> exFAT or APFS. Avoid FAT32 (“MS-DOS”), which can't store files larger than 4 GB.
+            You can check this in <i>Disk Utility</i>.</li>
+          <li><b>Space:</b> the stick needs about as much free space as the backup (shown in <i>Manage Backups…</i>).
+            This computer needs about the same again, because an encrypted backup is unlocked into a temporary copy that is
+            deleted after the check.</li>
+          <li><b>Tip:</b> copying the folder from the stick to this computer first makes the check faster.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===== 3. Android ===== -->
+    <h2 id="g-android">3 · Android: create a bug report</h2>
+    <p class="muted">Menu names differ slightly between brands (Samsung, Pixel, Xiaomi, …). Look for similar wording.</p>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <rect x="95" y="10" width="130" height="172" rx="16"/>
+        <text x="108" y="38" class="strong">About phone</text>
+        <line x1="108" y1="46" x2="212" y2="46"/>
+        <text x="108" y="66">Model</text><text x="108" y="88">Android version</text>
+        <rect class="hl" x="104" y="98" width="112" height="22" rx="4"/><text class="strong" x="108" y="113">Build number</text>
+        <circle cx="200" cy="109" r="6"/><circle cx="200" cy="109" r="12"/><circle cx="200" cy="109" r="18" stroke-dasharray="3 3"/>
+        <text x="236" y="114">× 7</text>
+        <text x="160" y="160" text-anchor="middle">“You are now</text><text x="160" y="174" text-anchor="middle">a developer!”</text>
+      </svg></div>
+      <div class="txt">
+        <h3>3.1 · Unlock “Developer options”</h3>
+        <ol>
+          <li>Open <b>Settings → About phone</b>. On some phones also tap <i>Software information</i>.</li>
+          <li>Tap <b>Build number</b> seven times in a row.</li>
+          <li>Enter your PIN if asked. A message says <b>“You are now a developer!”</b></li>
+        </ol>
+        <p class="note">This doesn't change anything on the phone. It only shows an extra settings menu. You can switch it off afterwards.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <rect x="95" y="10" width="130" height="172" rx="16"/>
+        <text x="108" y="38" class="strong">Developer opts</text>
+        <line x1="108" y1="46" x2="212" y2="46"/>
+        <rect class="hl" x="104" y="54" width="112" height="22" rx="4"/><text class="strong" x="108" y="69">Take bug report</text>
+        <text x="108" y="98">Stay awake</text>
+        <rect x="102" y="120" width="116" height="52" rx="8" class="fillbg"/>
+        <circle cx="114" cy="138" r="5"/><text x="124" y="142">Interactive</text>
+        <circle cx="114" cy="158" r="5"/><circle class="fillc" cx="114" cy="158" r="2.5"/><text class="strong" x="124" y="162">Full report</text>
+        <text x="236" y="162">← choose</text>
+      </svg></div>
+      <div class="txt">
+        <h3>3.2 · Take a full bug report</h3>
+        <ol>
+          <li>Go to <b>Settings → System → Developer options</b> (Samsung: <i>Settings → Developer options</i>, at the very bottom).</li>
+          <li>Tap <b>Take bug report</b>, choose <b>Full report</b>, then <b>Report</b>.</li>
+          <li>Wait 2–10 minutes. Keep the phone on and don't switch it off.</li>
+        </ol>
+        <p class="note">Airplane Mode can stay on. Creating the report doesn't need the internet.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <rect x="95" y="10" width="130" height="172" rx="16"/>
+        <rect class="hl" x="104" y="28" width="112" height="44" rx="8"/>
+        <text class="strong" x="112" y="46">Bug report</text><text x="112" y="62">ready · tap</text>
+        <path d="M160 82 v26 M150 98 l10 10 l10 -10"/>
+        <rect x="112" y="116" width="96" height="40" rx="6"/><text x="160" y="140" text-anchor="middle">bugreport.zip</text>
+        <path d="M228 136 h60 M278 128 l10 8 l-10 8"/>
+        <text x="236" y="122">to this</text><text x="236" y="160">computer</text>
+      </svg></div>
+      <div class="txt">
+        <h3>3.3 · Move the .zip file to this computer</h3>
+        <p>A notification <b>“Bug report captured”</b> appears. Tap it and choose how to send the file:</p>
+        <ul>
+          <li><b>Cable (best):</b> connect the phone, choose <i>File transfer</i> on the phone, and copy the .zip.
+            On a Mac you may need the free “Android File Transfer” app, or use the share option below.</li>
+          <li><b>Email to yourself</b> or a cloud drive. This needs Airplane Mode turned off briefly.
+            Do it only after the report was created.</li>
+        </ul>
+        <p class="note">The file is called something like <code>bugreport-…-2026-11-09.zip</code>.
+          In the scanner choose <b>Android → A bug report file</b>.</p>
+      </div>
+    </div>
+
+    <details class="help">
+      <summary>More thorough: AndroidQF (with a helper)</summary>
+      <p>AndroidQF collects much more than a bug report. It needs <b>USB debugging</b> turned on in Developer options and a
+        cable connection, and it runs as a small program on the computer. If a digital-security helper is supporting you,
+        they will usually do this part. Afterwards, choose <b>Android → An AndroidQF collection</b> in the scanner.</p>
+    </details>
+
+    <!-- ===== 4. After ===== -->
+    <h2 id="g-after">4 · After the check</h2>
+    <div class="step">
+      <div class="fig"><svg viewBox="0 0 320 190" aria-hidden="true">
+        <rect x="40" y="40" width="100" height="120" rx="6"/><path d="M40 62 h100"/><text x="90" y="56" text-anchor="middle">backup</text>
+        <rect x="70" y="92" width="40" height="34" rx="4"/><path d="M78 92 v-10 a12 12 0 0 1 24 0 v10"/>
+        <text x="170" y="70">✓ keep safe or</text><text x="170" y="92">✓ delete when done</text>
+        <text x="170" y="114">✓ SIM back in</text><text x="170" y="136">✓ Airplane off</text><text x="170" y="158">✓ dev options off</text>
+      </svg></div>
+      <div class="txt">
+        <ul>
+          <li><b>If the result is red:</b> keep the phone as it is (no reset), keep the result folder and the backup,
+            and contact a helpline (e.g. Access Now, accessnow.org/help).</li>
+          <li><b>If the result is clean:</b> you can switch Airplane Mode off, put the SIM back, and update the phone.</li>
+          <li><b>The backup contains your private data.</b> If you don't need it anymore, delete it:
+            Finder → iPhone → <i>Manage Backups…</i> → select → <i>Delete Backup</i>.
+            Moved it on a USB stick (step 2.6)? Delete it from the stick, from the other computer and from any copy on
+            this one, then empty the Trash.</li>
+          <li><b>Android:</b> switch <i>Developer options</i> off again (toggle at the top of that menu) and delete the bug report .zip
+            from places you sent it to (email, cloud).</li>
+          <li><b>If this wasn't your own computer:</b> on the iPhone you can remove the trust again with
+            <i>Settings → General → Transfer or Reset iPhone → Reset → Reset Location &amp; Privacy</i>.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="row noprint"><button class="btn" data-go="home">Ready: start the check</button></div>
+  </section>
+
+  <div id="globalError" class="alert error hidden"></div>
+</main>
+
+<!-- ========== Built-in terminal ========== -->
+<aside id="term" class="term hidden" aria-label="Terminal">
+  <div class="term-bar">
+    <span>~/easy-mvt: every command the scanner runs appears here</span>
+    <span><button class="link" id="termClear">clear</button> &nbsp; <button class="link" id="termClose">close</button></span>
+  </div>
+  <pre class="log" id="log"></pre>
+  <form class="term-input" id="termForm" autocomplete="off">
+    <span>$</span>
+    <input id="termCmd" spellcheck="false" placeholder="advanced: mvt-ios / mvt-android commands only, e.g.  mvt-ios check-fs --help">
+    <button class="btn" id="termRun">Run</button>
+    <button class="btn secondary" type="button" id="termStop">Stop</button>
+  </form>
+</aside>
+
+<footer>
+  unofficial interface for <a href="https://github.com/mvt-project/mvt" target="_blank" rel="noopener">MVT</a>,
+  the Mobile Verification Toolkit by Amnesty International's Security Lab · a clean result means no <i>known</i>
+  spyware traces were found. It does not prove a phone is safe.
+  <br>made by SsybaSgyu · <a href="https://github.com/SsybaSgyu/easy-mvt" target="_blank" rel="noopener">source code (MIT)</a>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
