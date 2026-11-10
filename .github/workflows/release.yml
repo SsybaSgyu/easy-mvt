@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          - os: macos-latest
             script: dist:mac        # arm64 + x64 (Intel) DMGs
           - os: windows-latest
             script: dist:win
